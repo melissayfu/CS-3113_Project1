@@ -7,6 +7,10 @@
 // Define the PCB structure (YOU MUST IMPLEMENT THIS)
 struct PCB {
     // TODO: Add fields: pid, state, pc, total_work
+    int pid = 0;
+    std::string state;
+    int pc = 0;
+    int total_work = 0;
     // TODO: Add constructor PCB
 };
 
