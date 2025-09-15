@@ -7,11 +7,18 @@
 // Define the PCB structure (YOU MUST IMPLEMENT THIS)
 struct PCB {
     // TODO: Add fields: pid, state, pc, total_work
-    int pid = 0;
+    int pid;
     std::string state;
-    int pc = 0;
-    int total_work = 0;
+    int pc;
+    int total_work;
+
     // TODO: Add constructor PCB
+   PCB(int processId, const std::string& processState, int programCounter, int work) {
+        pid = processId;
+        state = processState;
+        pc = programCounter;
+        total_work = work;
+    }
 };
 
 // Print states of all processes, sorted by PID (PROVIDED - DO NOT MODIFY)
