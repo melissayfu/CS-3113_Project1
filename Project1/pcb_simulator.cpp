@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <set>
 
 // Define the PCB structure (YOU MUST IMPLEMENT THIS)
 struct PCB {
@@ -14,9 +15,9 @@ struct PCB {
 
     // TODO: Add constructor PCB
    PCB(int processId, const std::string& processState, int programCounter, int work) {
-        pid = processId;
-        state = processState;
-        pc = programCounter;
+          pid = processId;
+        state = "Ready";  // all new processes start as Ready
+        pc = 0;           // program counter starts at 0
         total_work = work;
     }
 };
@@ -35,12 +36,43 @@ void printProcessStates(const std::vector<PCB>& pcbs, int timeSlice) {
 
 // Kernel simulator (YOU MUST IMPLEMENT THIS)
 void kernelSimulator(std::vector<PCB>& pcbs, int timeQuantum) {
-    //Implement scheduling as decribed in the project 1 description
-    //For each timed interrupt call printProcessStates
-    //You may create helper functions as needed
-    //Add comments to describe your implementation of this function and/or other helper functions
-}
+   std::queue<int> readyQueue; // Queue of indices of processes in pcbs vector
+    int timeSlice = 1;
 
+    // Initialize ready queue
+    for (int i = 0; i < pcbs.size(); ++i) {
+        readyQueue.push(i);
+    }
+
+    // Continue until all processes are terminated
+    while (!readyQueue.empty()) {
+        int idx = readyQueue.front();
+        readyQueue.pop();
+        PCB &current = pcbs[idx];
+
+        if (current.state != "Terminated") {
+            // Set running state
+            current.state = "Running";
+
+            // Calculate work done in this time slice
+            int workDone = std::min(timeQuantum, current.total_work - current.pc);
+            current.pc += workDone;
+
+            // Check if process completed
+            if (current.pc >= current.total_work) {
+                current.state = "Terminated";
+            } else {
+                current.state = "Ready";
+                // Re-add to queue for next round
+                readyQueue.push(idx);
+            }
+
+            // Print state after this interrupt
+            printProcessStates(pcbs, timeSlice);
+            ++timeSlice;
+        }
+    }
+}
 
 int main() {
     // Read from standard input via redirection (PROVIDED)
@@ -71,7 +103,9 @@ int main() {
             return 1;
         }
         // TODO: Add check for unique PIDs (e.g insert pid into the set pids)
+         pids.insert(pid); // add PID to set
         // TODO: Create PCB and add to pcbs (e.g., pcbs.emplace_back(pid, work))
+        pcbs.emplace_back(pid, work); // create PCB
     }
     
     int timeQuantum = 2;
