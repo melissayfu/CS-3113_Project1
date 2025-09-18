@@ -16,15 +16,21 @@ struct PCB {
         : pid(processId), pc(0), state("Ready"), total_work(work), remaining_work(work) {}
 };
 
+// Compare function for sorting by PID
+bool comparePCB(const PCB &a, const PCB &b) {
+    return a.pid < b.pid;
+}
+
 // Print states of all processes, sorted by PID (PROVIDED - DO NOT MODIFY)
 void printProcessStates(const std::vector<PCB>& pcbs, int timeSlice) {
     std::cout << "Interrupt " << timeSlice << ":" << std::endl;
     std::vector<PCB> sorted_pcbs = pcbs;
-    std::sort(sorted_pcbs.begin(), sorted_pcbs.end(),
-              [](const PCB& a, const PCB& b) { return a.pid < b.pid; });
-    for (const PCB& pcb : sorted_pcbs) {
-        std::cout << "PID " << pcb.pid << ": " << pcb.state << ", at pc " <<
-        pcb.pc << std::endl;
+    std::sort(sorted_pcbs.begin(), sorted_pcbs.end(), comparePCB);
+
+    for (size_t i = 0; i < sorted_pcbs.size(); ++i) {
+        std::cout << "PID " << sorted_pcbs[i].pid << ": "
+                  << sorted_pcbs[i].state << ", at pc "
+                  << sorted_pcbs[i].pc << std::endl;
     }
     std::cout << std::flush;
 }
@@ -32,42 +38,44 @@ void printProcessStates(const std::vector<PCB>& pcbs, int timeSlice) {
 // Kernel simulator (YOU MUST IMPLEMENT THIS)
 void kernelSimulator(std::vector<PCB>& pcbs, int timeQuantum) {
     std::queue<int> readyQueue;
-    for (int i = 0; i < (int)pcbs.size(); ++i) {
+    for (int i = 0; i < (int)pcbs.size(); ++i)
         readyQueue.push(i);
-    }
 
     int interruptCount = 0;
+
     while (!readyQueue.empty()) {
         int idx = readyQueue.front();
         readyQueue.pop();
-
         PCB &proc = pcbs[idx];
 
-        // Run process
-        proc.state = "Running";
-        int runUnits = std::min(timeQuantum, proc.remaining_work);
-        proc.pc += runUnits;
-        proc.remaining_work -= runUnits;
-        interruptCount++;
-
-        // Update states of others
+        // Set all unfinished processes to Ready
         for (int j = 0; j < (int)pcbs.size(); ++j) {
-            if (j == idx) continue;
-            if (pcbs[j].remaining_work > 0) {
+            if (pcbs[j].remaining_work > 0)
                 pcbs[j].state = "Ready";
-            }
         }
 
-        // If finished, mark terminated
+        // Current process is Running
+        proc.state = "Running";
+
+        // Calculate actual run units
+        int runUnits = (proc.remaining_work < timeQuantum) ? proc.remaining_work : timeQuantum;
+
+        // Update pc temporarily for printing
+        int old_pc = proc.pc;
+        proc.pc += runUnits;
+
+        // Print snapshot
+        interruptCount++;
+        printProcessStates(pcbs, interruptCount);
+
+        // Update remaining work and final state
+        proc.remaining_work -= runUnits;
         if (proc.remaining_work == 0) {
             proc.state = "Terminated";
         } else {
             proc.state = "Ready";
             readyQueue.push(idx);
         }
-
-        // Print snapshot
-        printProcessStates(pcbs, interruptCount);
     }
 }
 
@@ -100,10 +108,7 @@ int main() {
             std::endl;
             return 1;
         }
-        // TODO: Add check for unique PIDs (e.g insert pid into the set pids)
         pids.push_back(pid);
-
-        // TODO: Create PCB and add to pcbs (e.g., pcbs.emplace_back(pid, work))
         pcbs.emplace_back(pid, work);
     }
 
