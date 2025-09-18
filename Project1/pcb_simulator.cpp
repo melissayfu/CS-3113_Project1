@@ -38,41 +38,42 @@ void printProcessStates(const std::vector<PCB>& pcbs, int timeSlice) {
 // Kernel simulator (YOU MUST IMPLEMENT THIS)
 void kernelSimulator(std::vector<PCB>& pcbs, int timeQuantum) {
     std::queue<int> readyQueue;
-    for (int i = 0; i < (int)pcbs.size(); ++i)
+    for (int i = 0; i < (int)pcbs.size(); ++i) {
         readyQueue.push(i);
+    }
 
     int interruptCount = 0;
 
     while (!readyQueue.empty()) {
         int idx = readyQueue.front();
         readyQueue.pop();
+
         PCB &proc = pcbs[idx];
 
-        // Set all unfinished processes to Ready
-        for (int j = 0; j < (int)pcbs.size(); ++j) {
-            if (pcbs[j].remaining_work > 0)
-                pcbs[j].state = "Ready";
-        }
-
-        // Current process is Running
+        // Run process
+        int runUnits = (proc.remaining_work >= timeQuantum) ? timeQuantum : proc.remaining_work;
+        proc.pc += runUnits;
+        proc.remaining_work -= runUnits;
         proc.state = "Running";
 
-        // Calculate actual run units
-        int runUnits = (proc.remaining_work < timeQuantum) ? proc.remaining_work : timeQuantum;
+        // Update states of all other processes
+        for (int j = 0; j < (int)pcbs.size(); ++j) {
+            if (j == idx) continue;
+            if (pcbs[j].remaining_work > 0) {
+                pcbs[j].state = "Ready";
+            }
+        }
 
-        // Update pc temporarily for printing
-        int old_pc = proc.pc;
-        proc.pc += runUnits;
+        // If finished, mark terminated
+        if (proc.remaining_work == 0) {
+            proc.state = "Terminated";
+        }
 
-        // Print snapshot
         interruptCount++;
         printProcessStates(pcbs, interruptCount);
 
-        // Update remaining work and final state
-        proc.remaining_work -= runUnits;
-        if (proc.remaining_work == 0) {
-            proc.state = "Terminated";
-        } else {
+        // If not terminated, put back in ready queue
+        if (proc.remaining_work > 0) {
             proc.state = "Ready";
             readyQueue.push(idx);
         }
